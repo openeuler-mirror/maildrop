@@ -1,17 +1,17 @@
 %global _hardened_build 1
 Summary:             Mail delivery agent with filtering abilities
 Name:                maildrop
-Version:             2.9.3
+Version:             3.0.1
 Release:             1
 License:             GPLv2 with exceptions
 URL:                 https://sourceforge.net/projects/courier
 Source0:             https://downloads.sourceforge.net/project/courier/%{name}/%{version}/%{name}-%{version}.tar.bz2
 Source1:             https://downloads.sourceforge.net/project/courier/%{name}/%{version}/%{name}-%{version}.tar.bz2.sig
 Source2:             pubkey.maildrop
-Patch0001:           0001-Fix-SIGSEGV-in-reformime-1613761.patch
-Requires:            courier-unicode >= 1.4
+
+Requires:            courier-unicode >= 2.1
 BuildRequires:       automake, libtool, autoconf gcc-c++, gdbm-devel, libdb-devel, pcre-devel gawk
-BuildRequires:       gnupg courier-unicode-devel >= 1.4 gamin-devel
+BuildRequires:       gnupg courier-unicode-devel >= 2.1 libidn-devel gamin-devel
 %description
 maildrop is the mail filter/mail delivery agent that's used by the
 Courier Mail Server. This is a standalone build of the maildrop mail
@@ -47,7 +47,8 @@ gpg --verify %{SOURCE1} %{SOURCE0}
   --enable-use-dotlock=1 \
   --enable-syslog=1 \
   --enable-sendmail=%{_sbindir}/sendmail
-make
+
+%make_build
 
 %install
 rm -rf %{buildroot}
@@ -73,5 +74,8 @@ cp -pr README README.postfix ChangeLog UPGRADE %{buildroot}%{_defaultdocdir}/%{n
 %{_mandir}/man8/*.8*
 
 %changelog
+* Mon Jan 25 2021 orange-snn <songnannan2@huawei.com> - 3.0.1-1
+- update to 3.0.1
+
 * Wed Oct 14 2020 chengzihan <chengzihan2@huawei.com> - 2.9.3-1
 - Package init
