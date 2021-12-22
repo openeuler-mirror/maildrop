@@ -1,7 +1,7 @@
 %global _hardened_build 1
 Summary:             Mail delivery agent with filtering abilities
 Name:                maildrop
-Version:             3.0.1
+Version:             3.0.3
 Release:             1
 License:             GPLv2 with exceptions
 URL:                 https://sourceforge.net/projects/courier
@@ -11,7 +11,7 @@ Source2:             pubkey.maildrop
 
 Requires:            courier-unicode >= 2.1
 BuildRequires:       automake, libtool, autoconf gcc-c++, gdbm-devel, libdb-devel, pcre-devel gawk
-BuildRequires:       gnupg courier-unicode-devel >= 2.1 libidn-devel gamin-devel
+BuildRequires:       gnupg courier-unicode-devel >= 2.1 libidn-devel
 %description
 maildrop is the mail filter/mail delivery agent that's used by the
 Courier Mail Server. This is a standalone build of the maildrop mail
@@ -68,12 +68,17 @@ cp -pr README README.postfix ChangeLog UPGRADE %{buildroot}%{_defaultdocdir}/%{n
 %{_bindir}/reformime
 %{_bindir}/makedat
 %{_bindir}/makedatprog
+%{_bindir}/maildirkw
+%{_bindir}/maildirwatch
 %{_mandir}/man1/*.1*
 %{_mandir}/man5/*.5*
 %{_mandir}/man7/*.7*
 %{_mandir}/man8/*.8*
 
 %changelog
+* Thu Dec 16 2021 gaihuiying <gaihuiying1@huawei.com> - 3.0.3-1
+- update to 3.0.3
+
 * Mon Jan 25 2021 orange-snn <songnannan2@huawei.com> - 3.0.1-1
 - update to 3.0.1
 
