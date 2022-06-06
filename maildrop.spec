@@ -2,15 +2,18 @@
 Summary:             Mail delivery agent with filtering abilities
 Name:                maildrop
 Version:             3.0.3
-Release:             1
+Release:             2
 License:             GPLv2 with exceptions
 URL:                 https://sourceforge.net/projects/courier
 Source0:             https://downloads.sourceforge.net/project/courier/%{name}/%{version}/%{name}-%{version}.tar.bz2
 Source1:             https://downloads.sourceforge.net/project/courier/%{name}/%{version}/%{name}-%{version}.tar.bz2.sig
 Source2:             pubkey.maildrop
 
+Patch0:              backport-001-Convert-to-pcre2.patch
+Patch1:              backport-002-Convert-to-PCRE2.patch
+
 Requires:            courier-unicode >= 2.1
-BuildRequires:       automake, libtool, autoconf gcc-c++, gdbm-devel, libdb-devel, pcre-devel gawk
+BuildRequires:       automake, libtool, autoconf gcc-c++, gdbm-devel, libdb-devel, pcre2-devel gawk
 BuildRequires:       gnupg courier-unicode-devel >= 2.1 libidn-devel
 %description
 maildrop is the mail filter/mail delivery agent that's used by the
@@ -42,6 +45,7 @@ gpg --import %{SOURCE2}
 gpg --verify %{SOURCE1} %{SOURCE0}
 
 %build
+autoreconf
 %configure --disable-shared \
   --enable-use-flock=1 --with-locking-method=fcntl \
   --enable-use-dotlock=1 \
@@ -76,6 +80,9 @@ cp -pr README README.postfix ChangeLog UPGRADE %{buildroot}%{_defaultdocdir}/%{n
 %{_mandir}/man8/*.8*
 
 %changelog
+* Wed Jun 01 2022 gaihuiying <eaglegai@163.com> - 3.0.3-2
+- switch from pcre to pcre2
+
 * Thu Dec 16 2021 gaihuiying <gaihuiying1@huawei.com> - 3.0.3-1
 - update to 3.0.3
 
