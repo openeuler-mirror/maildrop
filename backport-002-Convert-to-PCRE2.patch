@@ -1,0 +1,180 @@
+From ba64de5232d3b0124e540124fcded55f8c4d42ab Mon Sep 17 00:00:00 2001
+From: Sam Varshavchik <mrsam@courier-mta.com>
+Date: Sun, 28 Nov 2021 10:17:28 -0500
+Subject: [PATCH] Convert to PCRE2.
+
+---
+ maildir/Makefile.am     | 23 +++++++++++++----------
+ maildir/configure.ac    | 17 ++++++++++-------
+ maildir/maildirfilter.c | 35 ++++++++++++++++-------------------
+ maildrop/configure.ac   |  2 +-
+ 4 files changed, 41 insertions(+), 37 deletions(-)
+
+diff --git a/maildir/Makefile.am b/maildir/Makefile.am
+index 54c0602..fa00669 100644
+--- a/libs/maildir/Makefile.am
++++ b/libs/maildir/Makefile.am
+@@ -3,6 +3,7 @@
+ # distribution information.
+ 
+ AM_CXXFLAGS=@COURIER_UNICODE_CXXFLAGS@
++AM_CFLAGS=@PCRE_CFLAGS@
+ 
+ noinst_LTLIBRARIES=libmaildir.la
+ 
+@@ -15,17 +16,19 @@ DOCS=	deliverquota.html.in deliverquota.8.in \
+ 	maildirwatch.html maildirwatch.1 \
+ 	maildirkw.html maildirkw.1
+ 
+-if HAVE_SGML
+-BUILT_SOURCES=maildirsharedrc.h maildirfilterconfig.h quotawarnmsg.h \
+-	mailbot.h autoresponsequota.h $(noinst_DATA) $(DOCS)
+-else
+ BUILT_SOURCES=maildirsharedrc.h maildirfilterconfig.h quotawarnmsg.h \
+-	mailbot.h autoresponsequota.h $(noinst_DATA)
++	mailbot.h autoresponsequota.h $(noinst_DATA) libmaildir.deps
++
++if HAVE_SGML
++BUILT_SOURCES += $(DOCS)
+ endif
+ 
+ noinst_DATA=deliverquota.html maildirmake.html deliverquota.8 maildirmake.1 \
+ 	maildiracl.html maildiracl.1
+ 
++libmaildir.deps: config.status
++	echo "$(PCRE_LDFLAGS)" >libmaildir.deps
++
+ libmaildir_la_SOURCES=autoresponse.c autoresponse.h \
+ 	maildiraclt.c maildiraclt.h \
+ 	maildircache.c maildircache.h \
+@@ -64,13 +67,13 @@ maildirmake_DEPENDENCIES=libmaildir.la \
+ 			../rfc822/librfc822.la
+ maildirmake_LDADD=libmaildir.la \
+ 			../numlib/libnumlib.la \
+-			../rfc822/librfc822.la -lcourier-unicode @LIBPCRE@
+-maildirmake_LDFLAGS=-static
++			../rfc822/librfc822.la -lcourier-unicode
++maildirmake_LDFLAGS=-static @PCRE_LDFLAGS@
+ 
+ testmaildirfilter_SOURCES=maildirfiltertypelist.h testmaildirfilter.c
+ testmaildirfilter_DEPENDENCIES=libmaildir.la ../numlib/libnumlib.la
+-testmaildirfilter_LDADD=libmaildir.la ../numlib/libnumlib.la -lcourier-unicode @LIBPCRE@
+-testmaildirfilter_LDFLAGS=-static
++testmaildirfilter_LDADD=libmaildir.la ../numlib/libnumlib.la -lcourier-unicode
++testmaildirfilter_LDFLAGS=-static @PCRE_LDFLAGS@
+ 
+ maildirkwtest_SOURCES=maildirkwtest.c
+ maildirkwtest_LDADD=libmaildir.la
+@@ -141,7 +144,7 @@ clean-local:
+ 
+ check-am:
+ 	@SHELL@ $(srcdir)/testsuite 2>&1 | cmp - $(srcdir)/testsuite.txt
+-	test "@LIBPCRE@" != "" || exit 0 ; @SHELL@ $(srcdir)/testsuite2 2>&1 | cmp - $(srcdir)/testsuite2.txt
++	test "@PCRE_LDFLAGS@" != "" || exit 0 ; @SHELL@ $(srcdir)/testsuite2 2>&1 | cmp - $(srcdir)/testsuite2.txt
+ 	LC_ALL=C; export LC_ALL; ./maildirkwtest | cmp -s - $(srcdir)/maildirkwtest.txt
+ 	LC_ALL=C; export LC_ALL; ./maildiraclttest
+ 	./testmaildirsearch iso-8859-1 needle haystack; test $$? = 2 && exit 0; exit 1
+diff --git a/maildir/configure.ac b/maildir/configure.ac
+index 946954f..5c2a64c 100644
+--- a/libs/maildir/configure.ac
++++ b/libs/maildir/configure.ac
+@@ -47,15 +47,18 @@ dnl Checks for header files.
+ AC_HEADER_DIRENT
+ AC_HEADER_STDC
+ AC_HEADER_TIME
+-AC_CHECK_HEADERS(sys/stat.h sys/wait.h fcntl.h unistd.h sysexits.h utime.h pcre.h pcre/pcre.h)
++AC_CHECK_HEADERS(sys/stat.h sys/wait.h fcntl.h unistd.h sysexits.h utime.h)
+ 
+-AC_CHECK_HEADER([pcre.h],
+-		[LIBPCRE=-lpcre])
++AC_CHECK_PROG(PCRE2, pcre2-config, yes, no)
+ 
+-AC_CHECK_HEADER([pcre/pcre.h],
+-		[LIBPCRE=-lpcre])
+-
+-AC_SUBST(LIBPCRE)
++if test "$PCRE2" = "yes"
++then
++	AC_DEFINE_UNQUOTED(HAVE_PCRE2,1,[Whether the pcre library was detected])
++	PCRE_LDFLAGS="`pcre2-config --libs8`"
++	PCRE_CFLAGS="`pcre2-config --cflags`"
++fi
++AC_SUBST(PCRE_LDFLAGS)
++AC_SUBST(PCRE_CFLAGS)
+ 
+ AC_HEADER_SYS_WAIT
+ 
+diff --git a/maildir/maildirfilter.c b/maildir/maildirfilter.c
+index 82702a1..844b051 100644
+--- a/libs/maildir/maildirfilter.c
++++ b/libs/maildir/maildirfilter.c
+@@ -26,13 +26,9 @@
+ #define	EX_SOFTWARE	70
+ #endif
+ 
+-#if	HAVE_PCRE_H
+-#include	<pcre.h>
+-#else
+-#if	HAVE_PCRE_PCRE_H
+-#include	<pcre/pcre.h>
+-#define HAVE_PCRE_H	1
+-#endif
++#if	HAVE_PCRE2
++#define PCRE2_CODE_UNIT_WIDTH 8
++#include	<pcre2.h>
+ #endif
+ 
+ #if	HAVE_SYS_STAT_H
+@@ -331,24 +327,25 @@ static int maildir_filter_ruleupdate_utf8(struct maildirfilter *r,
+ 			++c;
+ 		}
+ 
+-#if HAVE_PCRE_H
++#if HAVE_PCRE2
+ 		switch (type) {
+ 		case contains:
+ 		case startswith:
+ 		case endswith:
+ 			{
+-				const char *errptr;
+-				int errindex;
+-
+-				pcre *p=pcre_compile(value, PCRE_UTF8,
+-						     &errptr,
+-						     &errindex,
+-						     0);
+-
+-
+-				if (p == NULL)
++				int errcode;
++				PCRE2_SIZE errindex;
++				pcre2_code *pcre_regexp=
++					pcre2_compile((PCRE2_SPTR8)value,
++						      PCRE2_ZERO_TERMINATED,
++						      PCRE2_UTF,
++						      &errcode,
++						      &errindex,
++						      NULL);
++
++				if (pcre_regexp == NULL)
+ 					return -1;
+-				pcre_free(p);
++				pcre2_code_free(pcre_regexp);
+ 			}
+ 			break;
+ 		default:
+diff --git a/maildrop/configure.ac b/maildrop/configure.ac
+index 63acdfb..1c5655f 100644
+--- a/libs/maildrop/configure.ac
++++ b/libs/maildrop/configure.ac
+@@ -305,7 +305,7 @@ AC_CHECK_PROG(PCRE2, pcre2-config, yes, no)
+ 
+ if test "$PCRE2" = "no"
+ then
+-	AC_MSG_ERROR([pcre2 library not found])
++	AC_MSG_ERROR([pcre2-config was not found, please install PCRE2])
+ fi
+ 
+ dnl Try to find sendmail.
+-- 
+2.27.0
