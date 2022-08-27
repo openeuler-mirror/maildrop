@@ -2,7 +2,7 @@
 Summary:             Mail delivery agent with filtering abilities
 Name:                maildrop
 Version:             3.0.3
-Release:             2
+Release:             3
 License:             GPLv2 with exceptions
 URL:                 https://sourceforge.net/projects/courier
 Source0:             https://downloads.sourceforge.net/project/courier/%{name}/%{version}/%{name}-%{version}.tar.bz2
@@ -45,7 +45,7 @@ gpg --import %{SOURCE2}
 gpg --verify %{SOURCE1} %{SOURCE0}
 
 %build
-autoreconf
+autoreconf -i
 %configure --disable-shared \
   --enable-use-flock=1 --with-locking-method=fcntl \
   --enable-use-dotlock=1 \
@@ -80,6 +80,9 @@ cp -pr README README.postfix ChangeLog UPGRADE %{buildroot}%{_defaultdocdir}/%{n
 %{_mandir}/man8/*.8*
 
 %changelog
+* Fri Aug 26 2022 YukariChiba <i@0x7f.cc> - 3.0.3-3
+- Add autoreconf argument to enable higher version autoconf
+
 * Wed Jun 01 2022 gaihuiying <eaglegai@163.com> - 3.0.3-2
 - switch from pcre to pcre2
 
